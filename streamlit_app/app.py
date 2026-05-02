@@ -24,8 +24,9 @@ if mode == "Analyze One Statement":
     uploaded = st.file_uploader("Upload statement", type=["pdf"], key="single")
 
     if uploaded:
-        files = {"file": (uploaded.name, uploaded.getvalue(), "application/pdf")}
-        response = requests.post(f"{API_BASE}/upload", files=files)
+        with st.spinner("Processing statement..."):
+            files = {"file": (uploaded.name, uploaded.getvalue(), "application/pdf")}
+            response = requests.post(f"{API_BASE}/upload", files=files)
 
         if response.status_code == 200:
             data = response.json()
@@ -91,15 +92,31 @@ else:
 
     if file_a and file_b:
         if st.button("Compare Statements"):
-            files_a = {"file": (file_a.name, file_a.getvalue(), "application/pdf")}
-            files_b = {"file": (file_b.name, file_b.getvalue(), "application/pdf")}
+            with st.spinner("Comparing statements..."):
+                files_a = {"file": (file_a.name, file_a.getvalue(), "application/pdf")}
+                files_b = {"file": (file_b.name, file_b.getvalue(), "application/pdf")}
 
-            res_a = requests.post(f"{API_BASE}/upload", files=files_a)
-            res_b = requests.post(f"{API_BASE}/upload", files=files_b)
+                res_a = requests.post(f"{API_BASE}/upload", files=files_a)
+                res_b = requests.post(f"{API_BASE}/upload", files=files_b)
 
-            if res_a.status_code == 200 and res_b.status_code == 200:
+                if res_a.status_code != 200:
+                    st.error(f"Previous statement upload failed: {res_a.text}")
+                    st.stop()
+
+                if res_b.status_code != 200:
+                    st.error(f"Current statement upload failed: {res_b.text}")
+                    st.stop()
+
                 data_a = res_a.json()
                 data_b = res_b.json()
+
+                if "records" not in data_a:
+                    st.error(f"Previous statement failed: {data_a}")
+                    st.stop()
+
+                if "records" not in data_b:
+                    st.error(f"Current statement failed: {data_b}")
+                    st.stop()
 
                 compare_res = requests.post(
                     f"{API_BASE}/compare",
@@ -109,28 +126,31 @@ else:
                     }
                 )
 
-                if compare_res.status_code == 200:
-                    comp = compare_res.json()
-                    summary = comp["summary"]
+                if compare_res.status_code != 200:
+                    st.error(f"Comparison failed: {compare_res.text}")
+                    st.stop()
 
-                    st.subheader("Comparison Summary")
+                comp = compare_res.json()
+                summary = comp["summary"]
 
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("Spend Change", f"₹{summary['spend_change']:,.2f}")
-                    c2.metric("Income Change", f"₹{summary['income_change']:,.2f}")
-                    c3.metric("Net Change", f"₹{summary['net_change']:,.2f}")
+                st.subheader("Comparison Summary")
 
-                    st.subheader("Category Changes")
-                    cat_df = pd.DataFrame(comp["category_changes"])
-                    st.dataframe(cat_df, use_container_width=True)
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Spend Change", f"₹{summary['spend_change']:,.2f}")
+                c2.metric("Income Change", f"₹{summary['income_change']:,.2f}")
+                c3.metric("Net Change", f"₹{summary['net_change']:,.2f}")
 
-                    fig = px.bar(
-                        cat_df,
-                        x="category",
-                        y="change",
-                        title="Category Spend Change"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+                st.subheader("Category Changes")
+                cat_df = pd.DataFrame(comp["category_changes"])
+                st.dataframe(cat_df, use_container_width=True)
 
-                    st.subheader("AI Comparison Insight")
-                    st.success(comp["llm_insight"])
+                fig = px.bar(
+                    cat_df,
+                    x="category",
+                    y="change",
+                    title="Category Spend Change"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                st.subheader("AI Comparison Insight")
+                st.success(comp.get("llm_insight", "No AI comparison insight available."))
