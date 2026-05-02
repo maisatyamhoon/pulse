@@ -10,3 +10,4 @@ requests
 python-dotenv
 google-genai
 pytesseract
+pdf2image
