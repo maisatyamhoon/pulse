@@ -8,3 +8,4 @@ pdfplumber
 streamlit
 requests
 python-dotenv
+google-genai
