@@ -3,6 +3,8 @@ import requests
 import pandas as pd
 import plotly.express as px
 
+API_BASE = "https://pulse-a00c.onrender.com"
+
 st.set_page_config(page_title="Pulse", layout="wide")
 
 st.title("Pulse — Finance AI")
@@ -23,7 +25,7 @@ if mode == "Analyze One Statement":
 
     if uploaded:
         files = {"file": (uploaded.name, uploaded.getvalue(), "application/pdf")}
-        response = requests.post("http://127.0.0.1:8000/upload", files=files)
+        response = requests.post(f"{API_BASE}/upload", files=files)
 
         if response.status_code == 200:
             data = response.json()
@@ -71,7 +73,7 @@ if mode == "Analyze One Statement":
 
             if question:
                 qa_response = requests.post(
-                    "http://127.0.0.1:8000/ask",
+                    f"{API_BASE}/ask",
                     json={"records": records, "question": question}
                 )
 
@@ -92,15 +94,15 @@ else:
             files_a = {"file": (file_a.name, file_a.getvalue(), "application/pdf")}
             files_b = {"file": (file_b.name, file_b.getvalue(), "application/pdf")}
 
-            res_a = requests.post("http://127.0.0.1:8000/upload", files=files_a)
-            res_b = requests.post("http://127.0.0.1:8000/upload", files=files_b)
+            res_a = requests.post(f"{API_BASE}/upload", files=files_a)
+            res_b = requests.post(f"{API_BASE}/upload", files=files_b)
 
             if res_a.status_code == 200 and res_b.status_code == 200:
                 data_a = res_a.json()
                 data_b = res_b.json()
 
                 compare_res = requests.post(
-                    "http://127.0.0.1:8000/compare",
+                    f"{API_BASE}/compare",
                     json={
                         "records_a": data_a["records"],
                         "records_b": data_b["records"]
