@@ -1,10 +1,8 @@
 import re
 from datetime import datetime
-from app.parsers.extract import extract_pdf_text
 
 
-def parse_paytm_pdf(file):
-    text = extract_pdf_text(file)
+def parse_paytm(text: str):
     records = []
 
     pattern = re.findall(
@@ -16,7 +14,7 @@ def parse_paytm_pdf(file):
     for date_str, desc, amount in pattern:
         try:
             date = datetime.strptime(date_str + " 2026", "%d %b %Y").strftime("%Y-%m-%d")
-        except:
+        except Exception:
             continue
 
         amount = float(amount.replace(",", ""))
