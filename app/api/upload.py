@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Form
 from app.parsers.router import parse_file
 from app.services.ingest import enrich_transactions
 from app.services.insights import generate_insights
@@ -9,9 +9,14 @@ router = APIRouter()
 
 
 @router.post("/upload")
-async def upload_statement(file: UploadFile = File(...)):
+async def upload_statement(
+    file: UploadFile = File(...),
+    password: str = Form(default="")
+):
     try:
-        records = parse_file(file)
+        file_bytes = await file.read()
+
+        records = parse_file(file_bytes, password=password or None)
         records = enrich_transactions(records)
 
         insights = generate_insights(records)
