@@ -6,7 +6,6 @@ import plotly.express as px
 API_BASE = "https://pulse-a00c.onrender.com"
 
 st.set_page_config(page_title="Pulse", layout="wide")
-
 st.title("Pulse — Finance AI")
 
 mode = st.radio(
@@ -42,6 +41,10 @@ if mode == "Analyze One Statement":
 
             df = pd.DataFrame(records)
 
+            # Safety cleanup
+            df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
+            df["date"] = pd.to_datetime(df["date"], errors="coerce")
+
             total_credit = df[df["type"] == "credit"]["amount"].sum()
             total_debit = abs(df[df["type"] == "debit"]["amount"].sum())
             net = total_credit - total_debit
@@ -57,6 +60,43 @@ if mode == "Analyze One Statement":
             s2.metric("Savings Health", f"{score.get('savings_health', 0)}/100")
             s3.metric("Risk Score", f"{score.get('risk_score', 0)}/100")
             s4.metric("Overall Score", f"{score.get('overall_score', 0)}/100")
+
+            # =========================
+            # CHARTS (RESTORED)
+            # =========================
+            st.subheader("Spending by Category")
+            spend_df = df[df["amount"] < 0].copy()
+            if not spend_df.empty and "category" in spend_df.columns:
+                cat_spend = (
+                    spend_df.groupby("category", as_index=False)["amount"]
+                    .sum()
+                )
+                cat_spend["amount"] = cat_spend["amount"].abs()
+
+                fig1 = px.pie(
+                    cat_spend,
+                    names="category",
+                    values="amount",
+                    title="Category-wise Spending"
+                )
+                st.plotly_chart(fig1, use_container_width=True)
+
+            st.subheader("Cash Flow Trend")
+            daily = (
+                df.groupby(df["date"].dt.date, as_index=False)["amount"]
+                .sum()
+            )
+            daily.columns = ["date", "amount"]
+
+            if not daily.empty:
+                fig2 = px.line(
+                    daily,
+                    x="date",
+                    y="amount",
+                    title="Daily Net Cash Flow",
+                    markers=True
+                )
+                st.plotly_chart(fig2, use_container_width=True)
 
             st.subheader("Transactions")
             st.dataframe(df, use_container_width=True)
@@ -144,13 +184,14 @@ else:
                 cat_df = pd.DataFrame(comp["category_changes"])
                 st.dataframe(cat_df, use_container_width=True)
 
-                fig = px.bar(
-                    cat_df,
-                    x="category",
-                    y="change",
-                    title="Category Spend Change"
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                if not cat_df.empty:
+                    fig = px.bar(
+                        cat_df,
+                        x="category",
+                        y="change",
+                        title="Category Spend Change"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
 
                 st.subheader("AI Comparison Insight")
                 st.success(comp.get("llm_insight", "No AI comparison insight available."))
