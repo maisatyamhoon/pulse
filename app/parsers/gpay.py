@@ -3,6 +3,9 @@ from datetime import datetime
 
 
 def parse_gpay(text: str):
+    print("GPay RAW TEXT SAMPLE:")
+    print(text[:1000])
+
     lines = [line.strip() for line in text.split("\n") if line.strip()]
     records = []
 
