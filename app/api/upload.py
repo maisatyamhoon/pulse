@@ -17,6 +17,8 @@ async def upload_statement(
         file_bytes = await file.read()
 
         records = parse_file(file_bytes, password=password or None)
+
+
         records = enrich_transactions(records)
 
         insights = generate_insights(records)
